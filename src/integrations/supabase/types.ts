@@ -497,13 +497,6 @@ export type Database = {
             referencedRelation: "meters"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meter_assignments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
         ]
       }
       meters: {
@@ -549,15 +542,7 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "meters_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       payments: {
         Row: {
@@ -1185,28 +1170,44 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      __lov_exec: { Args: { sql: string }; Returns: undefined }
       acquire_customer_lock: {
         Args: { _customer_id: string; _tenant_id: string }
         Returns: undefined
       }
       approve_payment: { Args: { _payment_id: string }; Returns: undefined }
+      approve_payment_transaction: {
+        Args: { _payment_id: string }
+        Returns: undefined
+      }
       approve_reading: { Args: { _reading_id: string }; Returns: undefined }
       assert_authenticated_context: { Args: never; Returns: undefined }
       assert_tenant_role: {
         Args: { _roles: string[]; _tenant_id: string }
         Returns: boolean
       }
-      assign_meter: {
-        Args: {
-          _customer_id: string
-          _initial_index?: number
-          _installed_at?: string
-          _meter_type?: string
-          _serial: string
-          _started_at?: string
-        }
-        Returns: string
-      }
+      assign_meter:
+        | {
+            Args: {
+              _customer_id: string
+              _initial_index?: number
+              _installed_at?: string
+              _meter_type?: string
+              _serial: string
+              _started_at?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _customer_id: string
+              _initial_index?: number
+              _serial: string
+              _started_at?: string
+              _type?: string
+            }
+            Returns: string
+          }
       current_tenant_id: { Args: never; Returns: string }
       email_for_username: { Args: { _username: string }; Returns: string }
       execute_ledger_backfill: {
@@ -1241,21 +1242,26 @@ export type Database = {
         }
         Returns: string
       }
-      post_ledger_entry: {
-        Args: {
-          _credit: number
-          _customer_id: string
-          _debit: number
-          _description: string
-          _entry_type: string
-          _reference_id: string
-          _tenant_id: string
-        }
-        Returns: undefined
-      }
       price_consumption: {
         Args: { _consumption: number; _tenant_id: string }
         Returns: number
+      }
+      price_consumption_historical: {
+        Args: {
+          _consumption: number
+          _reading_date: string
+          _tenant_id: string
+        }
+        Returns: number
+      }
+      process_payment_entry: {
+        Args: {
+          _amount: number
+          _bill_id: string
+          _collected_by: string
+          _method: string
+        }
+        Returns: string
       }
       recalc_customer_balance: {
         Args: { _customer_id: string }
@@ -1280,6 +1286,10 @@ export type Database = {
       }
       reject_payment: {
         Args: { _payment_id: string; _reason?: string }
+        Returns: undefined
+      }
+      reject_payment_transaction: {
+        Args: { _payment_id: string }
         Returns: undefined
       }
       reject_reading: {
