@@ -1,0 +1,16 @@
+{
+  "name": "منصة ميزان لإدارة المياه",
+  "short_name": "ميزان",
+  "description": "منصة إدارة المياه متعددة المستأجرين — تعز، اليمن.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "theme_color": "#0f172a",
+  "background_color": "#fcfbf8",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}

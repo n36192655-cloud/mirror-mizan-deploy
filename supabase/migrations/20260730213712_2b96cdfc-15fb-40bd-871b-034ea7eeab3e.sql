@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.__import_exec(text);

@@ -10,33 +10,180 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as BillsRouteImport } from './routes/bills'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LossAnalysisRouteImport } from './routes/loss-analysis'
+import { Route as PaymentsRouteImport } from './routes/payments'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ReadingsRouteImport } from './routes/readings'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as TariffsRouteImport } from './routes/tariffs'
+import { Route as UsersRouteImport } from './routes/users'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillsRoute = BillsRouteImport.update({
+  id: '/bills',
+  path: '/bills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LossAnalysisRoute = LossAnalysisRouteImport.update({
+  id: '/loss-analysis',
+  path: '/loss-analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReadingsRoute = ReadingsRouteImport.update({
+  id: '/readings',
+  path: '/readings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TariffsRoute = TariffsRouteImport.update({
+  id: '/tariffs',
+  path: '/tariffs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/bills': typeof BillsRoute
+  '/customers': typeof CustomersRoute
+  '/login': typeof LoginRoute
+  '/loss-analysis': typeof LossAnalysisRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/readings': typeof ReadingsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/tariffs': typeof TariffsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/bills': typeof BillsRoute
+  '/customers': typeof CustomersRoute
+  '/login': typeof LoginRoute
+  '/loss-analysis': typeof LossAnalysisRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/readings': typeof ReadingsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/tariffs': typeof TariffsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/bills': typeof BillsRoute
+  '/customers': typeof CustomersRoute
+  '/login': typeof LoginRoute
+  '/loss-analysis': typeof LossAnalysisRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/readings': typeof ReadingsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/tariffs': typeof TariffsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/assistant'
+    | '/bills'
+    | '/customers'
+    | '/login'
+    | '/loss-analysis'
+    | '/payments'
+    | '/profile'
+    | '/readings'
+    | '/reset-password'
+    | '/tariffs'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/assistant'
+    | '/bills'
+    | '/customers'
+    | '/login'
+    | '/loss-analysis'
+    | '/payments'
+    | '/profile'
+    | '/readings'
+    | '/reset-password'
+    | '/tariffs'
+    | '/users'
+  id:
+    | '__root__'
+    | '/'
+    | '/assistant'
+    | '/bills'
+    | '/customers'
+    | '/login'
+    | '/loss-analysis'
+    | '/payments'
+    | '/profile'
+    | '/readings'
+    | '/reset-password'
+    | '/tariffs'
+    | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssistantRoute: typeof AssistantRoute
+  BillsRoute: typeof BillsRoute
+  CustomersRoute: typeof CustomersRoute
+  LoginRoute: typeof LoginRoute
+  LossAnalysisRoute: typeof LossAnalysisRoute
+  PaymentsRoute: typeof PaymentsRoute
+  ProfileRoute: typeof ProfileRoute
+  ReadingsRoute: typeof ReadingsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  TariffsRoute: typeof TariffsRoute
+  UsersRoute: typeof UsersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +195,99 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bills': {
+      id: '/bills'
+      path: '/bills'
+      fullPath: '/bills'
+      preLoaderRoute: typeof BillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loss-analysis': {
+      id: '/loss-analysis'
+      path: '/loss-analysis'
+      fullPath: '/loss-analysis'
+      preLoaderRoute: typeof LossAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/readings': {
+      id: '/readings'
+      path: '/readings'
+      fullPath: '/readings'
+      preLoaderRoute: typeof ReadingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tariffs': {
+      id: '/tariffs'
+      path: '/tariffs'
+      fullPath: '/tariffs'
+      preLoaderRoute: typeof TariffsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssistantRoute: AssistantRoute,
+  BillsRoute: BillsRoute,
+  CustomersRoute: CustomersRoute,
+  LoginRoute: LoginRoute,
+  LossAnalysisRoute: LossAnalysisRoute,
+  PaymentsRoute: PaymentsRoute,
+  ProfileRoute: ProfileRoute,
+  ReadingsRoute: ReadingsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  TariffsRoute: TariffsRoute,
+  UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
