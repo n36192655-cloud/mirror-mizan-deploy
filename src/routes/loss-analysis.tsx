@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AlertTriangle, Droplets, Trash2, Camera, TrendingDown } from "lucide-react";
 import { fmtNum } from "@/lib/pricing";
+import { computeWaterMetrics } from "@/lib/metrics";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 export const Route = createFileRoute("/loss-analysis")({
@@ -33,7 +34,7 @@ function monthAgoISO() {
 }
 
 function LossAnalysisPage() {
-  const { productionLogs, addProductionLog, deleteProductionLog, readings, meters } = useStore();
+  const { productionLogs, addProductionLog, deleteProductionLog, readings, bills } = useStore();
   const [units, setUnits] = useState("");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
@@ -61,30 +62,19 @@ function LossAnalysisPage() {
     toast.success("تم تسجيل الإنتاج");
   }
 
-  const analytics = useMemo(() => {
-    const fromT = new Date(from).getTime();
-    const toT = new Date(to).getTime() + 24 * 3600 * 1000 - 1;
-    
-    const inRange = (d: string) => {
-      const t = new Date(d).getTime();
-      return t >= fromT && t <= toT;
-    };
-    
-    const waterMeters = new Set(meters.map((m) => m.id));
-    
-    // تحسين الأداء: دمج العمليات في حلقة reduce واحدة مباشرة لتوفير الذاكرة والمعالجة
-    const produced = productionLogs.reduce((acc, p) => inRange(p.date) ? acc + p.units : acc, 0);
-    const consumed = readings.reduce((acc, r) => (waterMeters.has(r.meter_id) && inRange(r.date)) ? acc + r.consumption : acc, 0);
-    
-    const loss = Math.max(0, produced - consumed);
-    const pct = produced > 0 ? (loss / produced) * 100 : 0;
-    
-    return { produced, consumed, loss, pct };
-  }, [productionLogs, readings, meters, from, to]);
+  // نفس مصدر الحساب المستخدم في لوحة القيادة: NRW = (المُنتج − المُفوتر) ÷ المُنتج
+  const analytics = useMemo(
+    () => computeWaterMetrics({ productionLogs, readings, bills }, { from, to }),
+    [productionLogs, readings, bills, from, to],
+  );
 
-  // تحسين الأداء: تغليف بيانات المخطط بـ useMemo لمنع الـ Re-render غير المبرر للمكون الرسومي
   const chartData = useMemo(() => [
-    { name: "المياه (م³)", produced: analytics.produced, consumed: analytics.consumed, loss: analytics.loss },
+    {
+      name: "المياه (م³)",
+      produced: analytics.produced,
+      consumed: analytics.billedVolume,
+      loss: analytics.nrwVolume,
+    },
   ], [analytics]);
 
   return (
@@ -130,7 +120,7 @@ function LossAnalysisPage() {
               </div>
             </div>
             <div className="pt-2">
-              <LossStat label="فاقد المياه" pct={analytics.pct} loss={analytics.loss} unit="م³" icon={<Droplets className="w-4 h-4" />} />
+              <LossStat label="فاقد المياه" pct={analytics.nrwPct} loss={analytics.nrwVolume} unit="م³" icon={<Droplets className="w-4 h-4" />} />
             </div>
           </CardContent>
         </Card>
@@ -147,21 +137,21 @@ function LossAnalysisPage() {
               <Tooltip formatter={(v: number) => fmtNum(v)} />
               <Legend />
               <Bar dataKey="produced" name="مُنتج" fill="var(--water)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="consumed" name="مُستهلك" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="consumed" name="مُفوتر" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               <Bar dataKey="loss" name="فاقد" fill="#dc2626" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {analytics.pct > LOSS_THRESHOLD && (
+      {analytics.nrwPct > LOSS_THRESHOLD && (
         <Card className="border-destructive/40 bg-destructive/5">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
             <div className="text-sm">
               <div className="font-semibold">تنبيه ذكي — نسبة الفاقد مرتفعة</div>
               <div className="text-muted-foreground mt-1">
-                فاقد المياه {analytics.pct.toFixed(1)}% — يوصى بفحص شبكة التوزيع لاحتمال وجود تسرب أو استهلاك غير مُقاس.
+                فاقد المياه {analytics.nrwPct.toFixed(1)}% — يوصى بفحص شبكة التوزيع لاحتمال وجود تسرب أو استهلاك غير مُقاس.
               </div>
             </div>
           </CardContent>
