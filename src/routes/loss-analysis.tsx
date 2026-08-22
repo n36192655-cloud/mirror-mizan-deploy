@@ -61,30 +61,19 @@ function LossAnalysisPage() {
     toast.success("تم تسجيل الإنتاج");
   }
 
-  const analytics = useMemo(() => {
-    const fromT = new Date(from).getTime();
-    const toT = new Date(to).getTime() + 24 * 3600 * 1000 - 1;
-    
-    const inRange = (d: string) => {
-      const t = new Date(d).getTime();
-      return t >= fromT && t <= toT;
-    };
-    
-    const waterMeters = new Set(meters.map((m) => m.id));
-    
-    // تحسين الأداء: دمج العمليات في حلقة reduce واحدة مباشرة لتوفير الذاكرة والمعالجة
-    const produced = productionLogs.reduce((acc, p) => inRange(p.date) ? acc + p.units : acc, 0);
-    const consumed = readings.reduce((acc, r) => (waterMeters.has(r.meter_id) && inRange(r.date)) ? acc + r.consumption : acc, 0);
-    
-    const loss = Math.max(0, produced - consumed);
-    const pct = produced > 0 ? (loss / produced) * 100 : 0;
-    
-    return { produced, consumed, loss, pct };
-  }, [productionLogs, readings, meters, from, to]);
+  // نفس مصدر الحساب المستخدم في لوحة القيادة: NRW = (المُنتج − المُفوتر) ÷ المُنتج
+  const analytics = useMemo(
+    () => computeWaterMetrics({ productionLogs, readings, bills }, { from, to }),
+    [productionLogs, readings, bills, from, to],
+  );
 
-  // تحسين الأداء: تغليف بيانات المخطط بـ useMemo لمنع الـ Re-render غير المبرر للمكون الرسومي
   const chartData = useMemo(() => [
-    { name: "المياه (م³)", produced: analytics.produced, consumed: analytics.consumed, loss: analytics.loss },
+    {
+      name: "المياه (م³)",
+      produced: analytics.produced,
+      consumed: analytics.billedVolume,
+      loss: analytics.nrwVolume,
+    },
   ], [analytics]);
 
   return (
