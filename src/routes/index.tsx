@@ -47,27 +47,13 @@ function Dashboard() {
   }, [hydrateFromSupabase]);
 
   const k = useMemo(() => {
-    // Financial
-    const paidBills = bills.filter((b) => b.status === "paid");
-    const unpaidBills = bills.filter((b) => b.status !== "paid");
-    const totalBilled = bills.reduce((a, b) => a + b.total, 0);
-    const totalCollected =
-      bills.reduce((a, b) => a + (b.paid ?? 0), 0);
-    // المستحق = المتبقي الفعلي على كل فاتورة (نفس معادلة الخادم)، وليس إجمالي الفاتورة.
-    const outstanding = unpaidBills.reduce((a, b) => a + billBalance(b, payments), 0);
-    const collectionRate = totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 0;
-
-    // Water production vs consumption (NRW = Non-Revenue Water)
-    const produced = productionLogs.reduce((a, p) => a + p.units, 0);
-    const consumed = readings.reduce((a, r) => a + Math.max(0, r.consumption), 0);
-    const billedVolume = bills.reduce((a, b) => {
-      // approximate billed volume via reading linked to bill
-      const r = readings.find((x) => x.id === b.reading_id);
-      return a + (r ? Math.max(0, r.consumption) : 0);
-    }, 0);
-    const nrwVolume = Math.max(0, produced - billedVolume);
-    const nrwPct = produced > 0 ? (nrwVolume / produced) * 100 : 0;
-    const efficiencyPct = Math.max(0, 100 - nrwPct);
+    // كل الأرقام تأتي من مصدر الحساب الموحّد في "@/lib/metrics"
+    const fin = computeFinanceMetrics(bills, payments);
+    const water = computeWaterMetrics({ productionLogs, readings, bills });
+    const { totalCollected, outstanding, collectionRate } = fin;
+    const paidBills = { length: fin.paidBills };
+    const unpaidBills = { length: fin.unpaidBills };
+    const { produced, consumed, billedVolume, nrwVolume, nrwPct, efficiencyPct } = water;
 
     // Consumption behavior
     const suspicious = readings.filter((r) => r.flag !== "ok");
