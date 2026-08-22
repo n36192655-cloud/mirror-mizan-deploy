@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AlertTriangle, Droplets, Trash2, Camera, TrendingDown } from "lucide-react";
 import { fmtNum } from "@/lib/pricing";
+import { computeWaterMetrics } from "@/lib/metrics";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 export const Route = createFileRoute("/loss-analysis")({
