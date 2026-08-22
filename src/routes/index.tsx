@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
-import { useStore, billBalance } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import { computeFinanceMetrics, computeWaterMetrics } from "@/lib/metrics";
 import { fmtYER, fmtNum } from "@/lib/pricing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
