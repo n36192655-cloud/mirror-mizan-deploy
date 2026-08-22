@@ -33,7 +33,7 @@ function monthAgoISO() {
 }
 
 function LossAnalysisPage() {
-  const { productionLogs, addProductionLog, deleteProductionLog, readings, meters } = useStore();
+  const { productionLogs, addProductionLog, deleteProductionLog, readings, bills } = useStore();
   const [units, setUnits] = useState("");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
@@ -119,7 +119,7 @@ function LossAnalysisPage() {
               </div>
             </div>
             <div className="pt-2">
-              <LossStat label="فاقد المياه" pct={analytics.pct} loss={analytics.loss} unit="م³" icon={<Droplets className="w-4 h-4" />} />
+              <LossStat label="فاقد المياه" pct={analytics.nrwPct} loss={analytics.nrwVolume} unit="م³" icon={<Droplets className="w-4 h-4" />} />
             </div>
           </CardContent>
         </Card>
