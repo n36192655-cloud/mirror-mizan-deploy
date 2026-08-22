@@ -136,21 +136,21 @@ function LossAnalysisPage() {
               <Tooltip formatter={(v: number) => fmtNum(v)} />
               <Legend />
               <Bar dataKey="produced" name="مُنتج" fill="var(--water)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="consumed" name="مُستهلك" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="consumed" name="مُفوتر" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               <Bar dataKey="loss" name="فاقد" fill="#dc2626" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {analytics.pct > LOSS_THRESHOLD && (
+      {analytics.nrwPct > LOSS_THRESHOLD && (
         <Card className="border-destructive/40 bg-destructive/5">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
             <div className="text-sm">
               <div className="font-semibold">تنبيه ذكي — نسبة الفاقد مرتفعة</div>
               <div className="text-muted-foreground mt-1">
-                فاقد المياه {analytics.pct.toFixed(1)}% — يوصى بفحص شبكة التوزيع لاحتمال وجود تسرب أو استهلاك غير مُقاس.
+                فاقد المياه {analytics.nrwPct.toFixed(1)}% — يوصى بفحص شبكة التوزيع لاحتمال وجود تسرب أو استهلاك غير مُقاس.
               </div>
             </div>
           </CardContent>
