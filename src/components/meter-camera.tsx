@@ -121,16 +121,29 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
         audio: false,
       });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setIsCameraActive(true);
-      }
+      // إظهار عنصر video أولاً حتى يصبح videoRef.current متاحًا
+      setIsCameraActive(true);
+
+      // ربط الـstream بعد إعادة الرندر
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch((err) => {
+            console.error("Camera preview play error:", err);
+          });
+        } else {
+          // في حال عدم ظهور عنصر الفيديو، أوقف البث لمنع بقاء الكاميرا مفتوحة
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      }, 0);
     } catch (err) {
       console.error("Camera access error:", err);
-      setError("تعذر فتح الكاميرا الميدانية. يرجى التأكد من صلاحيات الكاميرا أو استخدام صورة من المعرض.");
+      setError(
+        "تعذر فتح الكاميرا الميدانية. يرجى التأكد من صلاحيات الكاميرا أو استخدام صورة من المعرض."
+      );
     }
   };
+
 
   const capturePhoto = useCallback(async () => {
     if (!videoRef.current) return;
