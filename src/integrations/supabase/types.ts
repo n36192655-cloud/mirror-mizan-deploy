@@ -1230,6 +1230,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_verified_meter_reading: {
+        Args: {
+          p_client_uuid: string
+          p_current_reading: number
+          p_customer_id: string
+          p_gps_verified?: boolean
+          p_lat?: number
+          p_lng?: number
+          p_meter_id: string
+          p_photo_url: string
+          p_reading_date: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       is_period_closed: {
         Args: { _date: string; _tenant_id: string }
         Returns: boolean
