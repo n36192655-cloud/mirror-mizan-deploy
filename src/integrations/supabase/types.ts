@@ -720,6 +720,57 @@ export type Database = {
           },
         ]
       }
+      reading_attempts: {
+        Row: {
+          attempt_no: number
+          client_uuid: string
+          created_at: string
+          created_by: string | null
+          id: string
+          meter_id: string | null
+          outcome: string
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          attempt_no: number
+          client_uuid: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meter_id?: string | null
+          outcome: string
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          attempt_no?: number
+          client_uuid?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meter_id?: string | null
+          outcome?: string
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_attempts_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tariff_tiers: {
         Row: {
           id: string
@@ -1326,6 +1377,16 @@ export type Database = {
           _method: string
         }
         Returns: string
+      }
+      record_reading_attempt: {
+        Args: {
+          p_client_uuid: string
+          p_meter_id: string
+          p_outcome: string
+          p_reason?: string
+          p_tenant_id: string
+        }
+        Returns: number
       }
       register_device_slot: {
         Args: {
