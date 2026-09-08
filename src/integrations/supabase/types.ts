@@ -1073,12 +1073,14 @@ export type Database = {
           accuracy: number | null
           approved_at: string | null
           approved_by: string | null
+          attempt_count: number
           client_uuid: string | null
           consumption: number | null
           created_at: string
           created_by: string | null
           current_reading: number
           customer_id: string
+          failure_reason: string | null
           flag: string | null
           gps_verified: boolean
           id: string
@@ -1091,23 +1093,27 @@ export type Database = {
           previous: number | null
           reader_id: string | null
           reading_date: string
+          reading_source: string
           reject_reason: string | null
           rejected_at: string | null
           rejected_by: string | null
           status: string
           tenant_id: string
           updated_at: string
+          verified_at: string | null
         }
         Insert: {
           accuracy?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          attempt_count?: number
           client_uuid?: string | null
           consumption?: number | null
           created_at?: string
           created_by?: string | null
           current_reading: number
           customer_id: string
+          failure_reason?: string | null
           flag?: string | null
           gps_verified?: boolean
           id?: string
@@ -1120,23 +1126,27 @@ export type Database = {
           previous?: number | null
           reader_id?: string | null
           reading_date?: string
+          reading_source?: string
           reject_reason?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           status?: string
           tenant_id: string
           updated_at?: string
+          verified_at?: string | null
         }
         Update: {
           accuracy?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          attempt_count?: number
           client_uuid?: string | null
           consumption?: number | null
           created_at?: string
           created_by?: string | null
           current_reading?: number
           customer_id?: string
+          failure_reason?: string | null
           flag?: string | null
           gps_verified?: boolean
           id?: string
@@ -1149,12 +1159,14 @@ export type Database = {
           previous?: number | null
           reader_id?: string | null
           reading_date?: string
+          reading_source?: string
           reject_reason?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           status?: string
           tenant_id?: string
           updated_at?: string
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -1230,6 +1242,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_meter_reading_with_provenance: {
+        Args: {
+          p_attempt_count: number
+          p_client_uuid: string
+          p_current_reading: number
+          p_customer_id: string
+          p_failure_reason?: string
+          p_gps_verified: boolean
+          p_lat: number
+          p_lng: number
+          p_meter_id: string
+          p_photo_url: string
+          p_reading_date: string
+          p_reading_source: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       insert_verified_meter_reading: {
         Args: {
           p_client_uuid: string
@@ -1272,9 +1302,21 @@ export type Database = {
         Args: { _consumption: number; _tenant_id: string }
         Returns: number
       }
+      price_consumption_historical: {
+        Args: {
+          _consumption: number
+          _pricing_date: string
+          _tenant_id: string
+        }
+        Returns: number
+      }
       recalc_customer_balance: {
         Args: { _customer_id: string }
         Returns: number
+      }
+      reconcile_customer_financial_state: {
+        Args: { _customer_id: string; _tenant_id: string }
+        Returns: undefined
       }
       record_payment: {
         Args: {
