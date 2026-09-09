@@ -453,8 +453,41 @@ function ReadingsPage() {
               </div>
               <div>
                 <Label>القراءة الحالية</Label>
-                <Input type="number" value={current} onChange={(e) => setCurrent(e.target.value)} />
+                <Input
+                  type="number" value={current} disabled={!manualUnlocked}
+                  placeholder={manualUnlocked ? "" : "يُفتح بعد 3 محاولات قراءة آلية فاشلة"}
+                  onChange={(e) => setCurrent(e.target.value)}
+                />
               </div>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-xs">
+                  <div className="font-semibold">القراءة الآلية للعداد (OCR)</div>
+                  <div className="text-muted-foreground">
+                    محرك القراءة الآلية غير متاح في هذا الإصدار — كل محاولة تُسجَّل كفشل حقيقي على السيرفر.
+                  </div>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <Badge variant="outline">المحاولات: {attempts.length} / 3</Badge>
+                  <Button size="sm" variant="outline" disabled={ocrBusy || manualUnlocked || !photoBlob}
+                    onClick={runOcrAttempt}>
+                    {ocrBusy ? <Loader2 className="w-3 h-3 ms-1 animate-spin" /> : <ShieldAlert className="w-3 h-3 ms-1" />}
+                    محاولة قراءة آلية
+                  </Button>
+                </div>
+              </div>
+              {manualUnlocked && (
+                <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> فُتح الإدخال اليدوي بعد 3 محاولات فاشلة مسجّلة.
+                </p>
+              )}
+              {!photoBlob && (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> التقط صورة العداد بالكاميرا أولاً.
+                </p>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
@@ -471,9 +504,11 @@ function ReadingsPage() {
               </div>
             </div>
 
-            <Button onClick={saveReading} size="lg" disabled={saving || geoBusy} className="w-full md:w-auto">
+            <Button onClick={saveReading} size="lg" disabled={saving || geoBusy || !photoBlob || !manualUnlocked}
+              className="w-full md:w-auto">
               {saving ? <><Loader2 className="w-4 h-4 ms-1 animate-spin" /> جاري الحفظ…</> : "حفظ القراءة"}
             </Button>
+
 
             {(photoPreview || ocrSerial || geo) && (
               <div className="flex flex-wrap gap-2 text-xs items-center">
