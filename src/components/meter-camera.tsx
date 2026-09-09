@@ -169,54 +169,9 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
     }
   }, [stopCamera, onCapture, cleanupPreview]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  // ملاحظة هندسية: لا يُقبل أي مصدر صورة غير الكاميرا المباشرة كدليل ميداني،
+  // لذلك أُزيل مسار "اختيار صورة من المعرض" بالكامل من واجهة القارئ.
 
-    // حماية مؤكدة من اختيار ملفات غير الصور
-    if (!selectedFile.type.startsWith("image/")) {
-      setError("يرجى اختيار ملف صورة صالح (JPG, PNG, WEBP).");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    setIsCompressing(true);
-    setError(null);
-
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(selectedFile);
-
-    img.onload = async () => {
-      try {
-        const { file, previewUrl: newPreview } = await compressImage(
-          img,
-          img.naturalWidth || 1280,
-          img.naturalHeight || 720
-        );
-        URL.revokeObjectURL(objectUrl);
-
-        cleanupPreview();
-        setPreviewUrl(newPreview);
-        stopCamera();
-        onCapture(file, newPreview);
-      } catch (err: any) {
-        console.error("Error compressing gallery image:", err);
-        setError("تعذر معالجة وضغط الصورة المختارة.");
-      } finally {
-        setIsCompressing(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      setIsCompressing(false);
-      setError("تعذر تحميل ملف الصورة المحدد. يرجى اختيار ملف صورة آخر.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-
-    img.src = objectUrl;
-  };
 
   const handleReset = () => {
     cleanupPreview();
