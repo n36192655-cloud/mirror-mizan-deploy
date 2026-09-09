@@ -2,116 +2,114 @@ import { useEffect, useState } from "react";
 import { useStore } from "./store";
 import { supabase } from "./supabase";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  countQueuedReadings,
+  deleteQueuedReading,
+  listQueuedReadings,
+  putQueuedReading,
+  type QueuedAttempt,
+  type QueuedReading,
+} from "./offline-queue";
 
-type ReadingInsert = Database["public"]["Tables"]["water_readings"]["Insert"];
+export type { QueuedReading, QueuedAttempt } from "./offline-queue";
 
-// Pending water-reading queue kept in localStorage so meter readers can keep
-// working in low-connectivity zones. On reconnect the queue is flushed
-// straight into `water_readings`; the database owns previous index,
-// consumption, anomaly flags, status and billing. `clientId` is sent as
-// `client_uuid`, which is UNIQUE per tenant — replays are no-ops.
-export interface PendingReading {
-  clientId: string;
-  /** customer uuid */
-  customerId: string;
-  /** meters.id uuid */
-  meterId: string;
-  meterNumber: string;
-  current: number;
-  readingDate?: string;
-  createdAt: string;
-  by?: string;
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-  tenantId?: string;
+// Offline field readings are persisted durably in IndexedDB (metadata + the
+// original captured image). On reconnect the image is uploaded FIRST to the
+// verified path `tenants/{tenant_id}/readings/{client_uuid}.{ext}`, then the
+// reading is submitted through the server-verified RPC
+// `insert_verified_meter_reading`, which owns previous index, consumption,
+// anomaly flags, status and billing. The stable `client_uuid` keeps replays
+// idempotent.
+
+export function extForType(type: string): "jpg" | "png" | "webp" {
+  if (type === "image/png") return "png";
+  if (type === "image/webp") return "webp";
+  return "jpg";
 }
 
-// v3: payload carries the real meters.id uuid and is flushed to the database
-// (v1/v2 payloads used client-side ids and are intentionally dropped).
-const KEY = "mizan-pending-readings-v3";
+export function storagePathFor(tenantId: string, clientUuid: string, type: string): string {
+  return `tenants/${tenantId}/readings/${clientUuid}.${extForType(type)}`;
+}
 
-function load(): PendingReading[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as PendingReading[]) : [];
-  } catch {
-    return [];
+export async function addPending(item: QueuedReading): Promise<void> {
+  await putQueuedReading(item);
+}
+
+export async function getPending(): Promise<QueuedReading[]> {
+  return listQueuedReadings();
+}
+
+export async function removePending(clientUuid: string): Promise<void> {
+  await deleteQueuedReading(clientUuid);
+}
+
+async function replayAttempts(p: QueuedReading) {
+  for (const a of p.attempts ?? []) {
+    await supabase.rpc("record_reading_attempt", {
+      p_tenant_id: p.tenantId,
+      p_client_uuid: p.clientUuid,
+      p_meter_id: p.meterId,
+      p_outcome: a.outcome,
+      p_reason: a.reason ?? null,
+    });
   }
 }
 
-function save(arr: PendingReading[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(arr));
-  window.dispatchEvent(new Event("mizan-pending-updated"));
-}
+export async function syncPending(): Promise<{ synced: number; blocked: number }> {
+  const list = await listQueuedReadings();
+  if (!list.length) return { synced: 0, blocked: 0 };
 
-export function getPending(): PendingReading[] {
-  return load();
-}
-
-export function addPending(
-  p: Omit<PendingReading, "clientId" | "createdAt"> & { clientId?: string },
-): PendingReading {
-  const list = load();
-  const item: PendingReading = {
-    ...p,
-    clientId: p.clientId ?? `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    createdAt: new Date().toISOString(),
-  };
-  save([...list, item]);
-  return item;
-}
-
-export function removePending(clientId: string) {
-  save(load().filter((p) => p.clientId !== clientId));
-}
-
-export async function syncPending(): Promise<{ synced: number }> {
-  const list = load();
-  if (!list.length) return { synced: 0 };
-
-  let n = 0;
-  const remaining: PendingReading[] = [];
+  let synced = 0;
+  let blocked = 0;
 
   for (const p of list) {
-    const { data: tenantRow } = await supabase.rpc("current_tenant_id");
-    const tenantId = p.tenantId ?? (tenantRow as unknown as string | null);
-    if (!tenantId) { remaining.push(p); continue; }
-
-    const { error } = await supabase.from("water_readings").insert({
-      tenant_id: tenantId,
-      customer_id: p.customerId,
-      meter_id: p.meterId,
-      current_reading: p.current,
-      reading_date: p.readingDate,
-      client_uuid: p.clientId,
-      lat: p.latitude ?? null,
-      lng: p.longitude ?? null,
-      accuracy: p.accuracy ?? null,
-      gps_verified: p.latitude != null,
-    } as ReadingInsert);
-
-    // 23505 = already stored under this client_uuid → the queue entry is done.
-    const duplicate = error?.code === "23505";
-    if (error && !duplicate) {
-      toast.error(`تعذّرت مزامنة قراءة مؤجلة: ${error.message}`);
-      remaining.push(p);
+    if (!p.photo) {
+      // Never silently dropped: kept in the queue and surfaced to the reader.
+      blocked++;
       continue;
     }
-    n++;
-    if (p.tenantId) {
-      void broadcastTenantEvent(p.tenantId, "reading", {
-        customerId: p.customerId, meterNumber: p.meterNumber, current: p.current, by: p.by, at: new Date().toISOString(),
+    if (!p.tenantId) { blocked++; continue; }
+
+    try {
+      const path = storagePathFor(p.tenantId, p.clientUuid, p.photoType || p.photo.type);
+      const up = await supabase.storage
+        .from("meter-readings")
+        .upload(path, p.photo, { contentType: p.photoType || p.photo.type || "image/jpeg", upsert: true });
+      if (up.error) throw new Error(up.error.message);
+
+      await replayAttempts(p);
+
+      const { error } = await supabase.rpc("insert_verified_meter_reading", {
+        p_tenant_id: p.tenantId,
+        p_customer_id: p.customerId,
+        p_meter_id: p.meterId,
+        p_current_reading: p.current,
+        p_reading_date: p.readingDate,
+        p_client_uuid: p.clientUuid,
+        p_photo_url: path,
+        p_lat: p.latitude ?? null,
+        p_lng: p.longitude ?? null,
+        p_gps_verified: p.latitude != null,
       });
+      if (error) throw new Error(error.message);
+
+      await deleteQueuedReading(p.clientUuid);
+      synced++;
+      void broadcastTenantEvent(p.tenantId, "reading", {
+        customerId: p.customerId, meterNumber: p.meterNumber, current: p.current,
+        by: p.by, at: new Date().toISOString(),
+      });
+    } catch (err) {
+      blocked++;
+      toast.error(`تعذّرت مزامنة قراءة مؤجلة: ${(err as Error).message}`);
     }
   }
 
-  save(remaining);
-  if (n > 0) void useStore.getState().hydrateFromSupabase();
-  return { synced: n };
+  if (blocked > 0) {
+    toast.warning(`${blocked} قراءة مؤجلة لم تُرحّل بعد (تحقق من صورة الدليل أو الاتصال)`);
+  }
+  if (synced > 0) void useStore.getState().hydrateFromSupabase();
+  return { synced, blocked };
 }
 
 // ─── Supabase Realtime broadcast ────────────────────────────────────────────
@@ -181,7 +179,7 @@ export function useOnlineStatus() {
 export function usePendingCount() {
   const [count, setCount] = useState<number>(0);
   useEffect(() => {
-    const refresh = () => setCount(load().length);
+    const refresh = () => { void countQueuedReadings().then(setCount); };
     refresh();
     window.addEventListener("mizan-pending-updated", refresh);
     window.addEventListener("storage", refresh);
