@@ -54,6 +54,10 @@ function ReadingsPage() {
   const [geo, setGeo] = useState<GeoFix | null>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [clientUuid, setClientUuid] = useState<string>(() => crypto.randomUUID());
+  const [attempts, setAttempts] = useState<QueuedAttempt[]>([]);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const manualUnlocked = attempts.length >= 3;
   const [readingDate, setReadingDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState<"input" | "pending" | "log" | "bills">("input");
 
