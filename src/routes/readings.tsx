@@ -16,7 +16,7 @@ import {
 import { fmtYER } from "@/lib/pricing";
 import { MeterCamera } from "@/components/meter-camera";
 import { getGeoFix, type GeoFix } from "@/lib/geolocation";
-import { addPending } from "@/lib/sync";
+import { addPending, storagePathFor, type QueuedAttempt } from "@/lib/sync";
 import type { Database } from "@/integrations/supabase/types";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
