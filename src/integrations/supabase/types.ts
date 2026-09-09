@@ -510,11 +510,16 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          decimal_digits: number | null
+          decimal_separator: string | null
+          display_type: string | null
           id: string
           initial_index: number
           installed_at: string | null
+          integer_digits: number | null
           meter_type: string
           notes: string | null
+          register_semantics: Json | null
           serial: string
           size: string | null
           status: string
@@ -524,11 +529,16 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          decimal_digits?: number | null
+          decimal_separator?: string | null
+          display_type?: string | null
           id?: string
           initial_index?: number
           installed_at?: string | null
+          integer_digits?: number | null
           meter_type?: string
           notes?: string | null
+          register_semantics?: Json | null
           serial: string
           size?: string | null
           status?: string
@@ -538,11 +548,16 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          decimal_digits?: number | null
+          decimal_separator?: string | null
+          display_type?: string | null
           id?: string
           initial_index?: number
           installed_at?: string | null
+          integer_digits?: number | null
           meter_type?: string
           notes?: string | null
+          register_semantics?: Json | null
           serial?: string
           size?: string | null
           status?: string
@@ -1337,6 +1352,7 @@ export type Database = {
         }
         Returns: string
       }
+      mizan_business_date: { Args: never; Returns: string }
       post_ledger_entry: {
         Args: {
           _credit: number
@@ -1360,6 +1376,10 @@ export type Database = {
           _tenant_id: string
         }
         Returns: number
+      }
+      rebuild_customer_ledger_running_balance: {
+        Args: { _customer_id: string; _tenant_id: string }
+        Returns: undefined
       }
       recalc_customer_balance: {
         Args: { _customer_id: string }

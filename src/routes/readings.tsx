@@ -16,7 +16,7 @@ import {
 import { fmtYER } from "@/lib/pricing";
 import { MeterCamera } from "@/components/meter-camera";
 import { getGeoFix, type GeoFix } from "@/lib/geolocation";
-import { addPending } from "@/lib/sync";
+import { addPending, storagePathFor, type QueuedAttempt } from "@/lib/sync";
 import type { Database } from "@/integrations/supabase/types";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
@@ -54,6 +54,10 @@ function ReadingsPage() {
   const [geo, setGeo] = useState<GeoFix | null>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [clientUuid, setClientUuid] = useState<string>(() => crypto.randomUUID());
+  const [attempts, setAttempts] = useState<QueuedAttempt[]>([]);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const manualUnlocked = attempts.length >= 3;
   const [readingDate, setReadingDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState<"input" | "pending" | "log" | "bills">("input");
 
@@ -208,6 +212,39 @@ function ReadingsPage() {
     setPhotoPreview(undefined);
   }
 
+  /**
+   * لا يوجد محرك OCR مفعّل في هذا الإصدار — لذلك كل محاولة قراءة آلية تُسجَّل
+   * على السيرفر كفشل حقيقي (OCR_FAILED) بسببها الصريح، ولا يُفتح الإدخال
+   * اليدوي إلا بعد ثلاث محاولات فاشلة مسجّلة فعلاً.
+   */
+  async function runOcrAttempt() {
+    if (!tenantId || !selectedMeter) return toast.error("اختر مشتركاً بعداد مرتبط أولاً");
+    if (!photoBlob) return toast.error("التقط صورة العداد بالكاميرا أولاً");
+    if (attempts.length >= 3) return;
+
+    const attemptNo = attempts.length + 1;
+    const reason = "محرك القراءة الآلية غير متاح في هذا الإصدار";
+    setOcrBusy(true);
+    try {
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        const { error } = await supabase.rpc("record_reading_attempt", {
+          p_tenant_id: tenantId,
+          p_client_uuid: clientUuid,
+          p_meter_id: selectedMeter.id,
+          p_outcome: "OCR_FAILED",
+          p_reason: reason,
+        });
+        if (error) throw new Error(error.message);
+      }
+      setAttempts((prev) => [...prev, { attemptNo, outcome: "OCR_FAILED" as const, reason }]);
+      toast.error(`فشلت المحاولة ${attemptNo} من 3: ${reason}`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setOcrBusy(false);
+    }
+  }
+
   async function captureGeo() {
     setGeoBusy(true);
     try {
@@ -221,7 +258,8 @@ function ReadingsPage() {
 
   function resetForm() {
     setCurrent(""); setPhotoBlob(null); setPhotoPreview(undefined);
-    setOcrSerial(undefined); setGeo(null);
+    setOcrSerial(undefined); setGeo(null); setAttempts([]);
+    setClientUuid(crypto.randomUUID());
     setReadingDate(new Date().toISOString().slice(0, 10));
   }
 
@@ -229,6 +267,8 @@ function ReadingsPage() {
     if (!tenantId || !user) return toast.error("لا توجد جلسة نشطة");
     if (!selectedCustomer) return toast.error("اختر مشتركاً");
     if (!selectedMeter) return toast.error("لا يوجد عداد مرتبط بهذا المشترك");
+    if (!photoBlob) return toast.error("صورة العداد من الكاميرا المباشرة مطلوبة قبل الحفظ");
+    if (!manualUnlocked) return toast.error("الإدخال اليدوي يُفتح بعد 3 محاولات قراءة آلية فاشلة مسجّلة");
     if (current === "" || Number.isNaN(+current)) return toast.error("أدخل القراءة الحالية");
 
     if (ocrSerial &&
@@ -245,53 +285,52 @@ function ReadingsPage() {
 
     setSaving(true);
     try {
-      const clientUuid = crypto.randomUUID();
+      // معرّف واحد ثابت للقراءة: اسم ملف الصورة و client_uuid في قاعدة البيانات.
+      const photoType = photoBlob.type || "image/jpeg";
 
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        addPending({
-          clientId: clientUuid,
+        await addPending({
+          clientUuid,
           meterId: selectedMeter.id,
           meterNumber: selectedMeter.number,
           customerId: customerId!,
           current: +current,
           readingDate,
+          createdAt: new Date().toISOString(),
           by: user.userId,
           latitude: fix?.lat,
           longitude: fix?.lng,
           accuracy: fix?.accuracy,
-          tenantId,
+          photo: photoBlob,
+          photoType,
+          attempts,
         });
-        toast.success("لا يوجد اتصال — حُفظت القراءة محلياً وسترسل تلقائياً عند عودة الشبكة");
+        toast.success("لا يوجد اتصال — حُفظت القراءة والصورة على الجهاز وسترسل تلقائياً عند عودة الشبكة");
         resetForm();
         return;
       }
 
-      let photoUrl: string | null = null;
-      if (photoBlob) {
-        const path = `tenants/${tenantId}/readings/${crypto.randomUUID()}.jpg`;
-        const up = await supabase.storage
-          .from("meter-readings")
-          .upload(path, photoBlob, { contentType: photoBlob.type, upsert: false });
-        if (up.error) throw new Error(`رفع الصورة فشل: ${up.error.message}`);
-        photoUrl = path;
-      }
+      const path = storagePathFor(tenantId, clientUuid, photoType);
+      const up = await supabase.storage
+        .from("meter-readings")
+        .upload(path, photoBlob, { contentType: photoType, upsert: true });
+      if (up.error) throw new Error(`رفع الصورة فشل: ${up.error.message}`);
 
-      const { error } = await supabase.from("water_readings").insert({
-        tenant_id: tenantId,
-        customer_id: customerId!,
-        meter_id: selectedMeter.id,
-        current_reading: +current,
-        reading_date: readingDate,
-        client_uuid: clientUuid,
-        reader_id: user.userId,
-        photo_url: photoUrl,
-        lat: fix?.lat ?? null,
-        lng: fix?.lng ?? null,
-        gps_verified: !!fix,
-      } as Database["public"]["Tables"]["water_readings"]["Insert"]);
+      const { error } = await supabase.rpc("insert_verified_meter_reading", {
+        p_tenant_id: tenantId,
+        p_customer_id: customerId!,
+        p_meter_id: selectedMeter.id,
+        p_current_reading: +current,
+        p_reading_date: readingDate,
+        p_client_uuid: clientUuid,
+        p_photo_url: path,
+        p_lat: fix?.lat ?? null,
+        p_lng: fix?.lng ?? null,
+        p_gps_verified: !!fix,
+      });
 
       if (error) {
-        if (error.code === "23505" && /one_per_meter_day/.test(error.message)) {
+        if (/one_per_meter_day/.test(error.message)) {
           throw new Error("توجد قراءة مسجلة لهذا العداد في نفس التاريخ");
         }
         throw new Error(error.message);
@@ -303,6 +342,7 @@ function ReadingsPage() {
       toast.error((e as Error).message);
     } finally { setSaving(false); }
   }
+
 
   async function approve(id: string) {
     const { error } = await supabase.rpc("approve_reading", { _reading_id: id });
@@ -413,8 +453,41 @@ function ReadingsPage() {
               </div>
               <div>
                 <Label>القراءة الحالية</Label>
-                <Input type="number" value={current} onChange={(e) => setCurrent(e.target.value)} />
+                <Input
+                  type="number" value={current} disabled={!manualUnlocked}
+                  placeholder={manualUnlocked ? "" : "يُفتح بعد 3 محاولات قراءة آلية فاشلة"}
+                  onChange={(e) => setCurrent(e.target.value)}
+                />
               </div>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-xs">
+                  <div className="font-semibold">القراءة الآلية للعداد (OCR)</div>
+                  <div className="text-muted-foreground">
+                    محرك القراءة الآلية غير متاح في هذا الإصدار — كل محاولة تُسجَّل كفشل حقيقي على السيرفر.
+                  </div>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <Badge variant="outline">المحاولات: {attempts.length} / 3</Badge>
+                  <Button size="sm" variant="outline" disabled={ocrBusy || manualUnlocked || !photoBlob}
+                    onClick={runOcrAttempt}>
+                    {ocrBusy ? <Loader2 className="w-3 h-3 ms-1 animate-spin" /> : <ShieldAlert className="w-3 h-3 ms-1" />}
+                    محاولة قراءة آلية
+                  </Button>
+                </div>
+              </div>
+              {manualUnlocked && (
+                <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> فُتح الإدخال اليدوي بعد 3 محاولات فاشلة مسجّلة.
+                </p>
+              )}
+              {!photoBlob && (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> التقط صورة العداد بالكاميرا أولاً.
+                </p>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
@@ -431,9 +504,11 @@ function ReadingsPage() {
               </div>
             </div>
 
-            <Button onClick={saveReading} size="lg" disabled={saving || geoBusy} className="w-full md:w-auto">
+            <Button onClick={saveReading} size="lg" disabled={saving || geoBusy || !photoBlob || !manualUnlocked}
+              className="w-full md:w-auto">
               {saving ? <><Loader2 className="w-4 h-4 ms-1 animate-spin" /> جاري الحفظ…</> : "حفظ القراءة"}
             </Button>
+
 
             {(photoPreview || ocrSerial || geo) && (
               <div className="flex flex-wrap gap-2 text-xs items-center">

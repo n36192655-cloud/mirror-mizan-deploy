@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, RefreshCw, Upload, Check, AlertCircle } from "lucide-react";
+import { Camera, RefreshCw, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -78,7 +78,6 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
   initialPreview,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialPreview || null);
@@ -169,54 +168,9 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
     }
   }, [stopCamera, onCapture, cleanupPreview]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  // ملاحظة هندسية: لا يُقبل أي مصدر صورة غير الكاميرا المباشرة كدليل ميداني،
+  // لذلك أُزيل مسار "اختيار صورة من المعرض" بالكامل من واجهة القارئ.
 
-    // حماية مؤكدة من اختيار ملفات غير الصور
-    if (!selectedFile.type.startsWith("image/")) {
-      setError("يرجى اختيار ملف صورة صالح (JPG, PNG, WEBP).");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    setIsCompressing(true);
-    setError(null);
-
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(selectedFile);
-
-    img.onload = async () => {
-      try {
-        const { file, previewUrl: newPreview } = await compressImage(
-          img,
-          img.naturalWidth || 1280,
-          img.naturalHeight || 720
-        );
-        URL.revokeObjectURL(objectUrl);
-
-        cleanupPreview();
-        setPreviewUrl(newPreview);
-        stopCamera();
-        onCapture(file, newPreview);
-      } catch (err: any) {
-        console.error("Error compressing gallery image:", err);
-        setError("تعذر معالجة وضغط الصورة المختارة.");
-      } finally {
-        setIsCompressing(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      setIsCompressing(false);
-      setError("تعذر تحميل ملف الصورة المحدد. يرجى اختيار ملف صورة آخر.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-
-    img.src = objectUrl;
-  };
 
   const handleReset = () => {
     cleanupPreview();
@@ -235,7 +189,7 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
       )}
 
       {!previewUrl && !isCameraActive && (
-        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+        <div className="flex flex-col items-center gap-2 w-full">
           <Button
             type="button"
             onClick={startCamera}
@@ -245,25 +199,12 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
             <Camera className="w-4 h-4" />
             فتح الكاميرا للالتقاط
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isCompressing}
-            onClick={() => fileInputRef.current?.click()}
-            className="gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            اختيار صورة من المعرض
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/jpg"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+          <p className="text-[11px] text-muted-foreground text-center">
+            الدليل الميداني يُلتقط بالكاميرا المباشرة فقط — لا يُقبل رفع صورة من المعرض.
+          </p>
         </div>
       )}
+
 
       {isCameraActive && (
         <div className="relative w-full max-w-md overflow-hidden rounded-lg bg-black aspect-video flex items-center justify-center">
