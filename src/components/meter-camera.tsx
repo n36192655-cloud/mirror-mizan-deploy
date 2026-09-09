@@ -190,7 +190,7 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
       )}
 
       {!previewUrl && !isCameraActive && (
-        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+        <div className="flex flex-col items-center gap-2 w-full">
           <Button
             type="button"
             onClick={startCamera}
@@ -200,25 +200,12 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
             <Camera className="w-4 h-4" />
             فتح الكاميرا للالتقاط
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isCompressing}
-            onClick={() => fileInputRef.current?.click()}
-            className="gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            اختيار صورة من المعرض
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/jpg"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+          <p className="text-[11px] text-muted-foreground text-center">
+            الدليل الميداني يُلتقط بالكاميرا المباشرة فقط — لا يُقبل رفع صورة من المعرض.
+          </p>
         </div>
       )}
+
 
       {isCameraActive && (
         <div className="relative w-full max-w-md overflow-hidden rounded-lg bg-black aspect-video flex items-center justify-center">
