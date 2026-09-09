@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, RefreshCw, Upload, Check, AlertCircle } from "lucide-react";
+import { Camera, RefreshCw, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -78,7 +78,6 @@ export const MeterCamera: React.FC<MeterCameraProps> = ({
   initialPreview,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialPreview || null);
